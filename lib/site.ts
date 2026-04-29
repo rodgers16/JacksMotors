@@ -11,10 +11,10 @@ export const site = {
 
   address: {
     street: "1234 Auto Row",
-    city: "Toronto",
-    region: "ON",
-    postalCode: "M1A 0A1",
-    country: "CA",
+    city: "Austin",
+    region: "TX",
+    postalCode: "78701",
+    country: "US",
   },
 
   hours: [
@@ -29,7 +29,7 @@ export const site = {
     youtube: "https://youtube.com/@jacksmotors",
   },
 
-  dealerLicense: "OMVIC #0000000",
+  dealerLicense: "Dealer License #0000000",
 };
 
 export type SiteConfig = typeof site;

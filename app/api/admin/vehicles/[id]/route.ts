@@ -39,7 +39,7 @@ export async function PATCH(
   if (v.exteriorColor !== undefined)  updates.exteriorColor = v.exteriorColor || null;
   if (v.interiorColor !== undefined)  updates.interiorColor = v.interiorColor || null;
   if (v.price !== undefined)          updates.priceCents = v.price * 100;
-  if (v.mileage !== undefined)        updates.mileageKm = v.mileage;
+  if (v.mileage !== undefined)        updates.mileage = v.mileage;
   if (v.description !== undefined)    updates.description = v.description || null;
   if (v.badges !== undefined)         updates.badges = v.badges;
   if (v.carfaxUrl !== undefined)      updates.carfaxUrl = v.carfaxUrl || null;

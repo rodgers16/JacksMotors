@@ -1,25 +1,13 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { VehicleForm } from "@/components/admin/VehicleForm";
 
 export default function NewVehiclePage() {
   return (
-    <div className="mx-auto max-w-[1100px] px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
-      <Link
-        href="/admin/inventory"
-        className="cap-label inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft size={13} /> All vehicles
-      </Link>
-      <div className="mt-6">
-        <p className="eyebrow">New car</p>
-        <h1 className="font-display mt-3 text-balance text-4xl leading-[0.95] sm:text-5xl">
-          Add a vehicle
-        </h1>
+    <div className="mx-auto max-w-[800px] px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
+      <div className="mb-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Add a vehicle</h1>
+        <p className="mt-1 text-muted-foreground">Fill in the basics, save, then add photos.</p>
       </div>
-      <div className="mt-10">
-        <VehicleForm mode="new" />
-      </div>
+      <VehicleForm mode="new" />
     </div>
   );
 }

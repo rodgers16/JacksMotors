@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 const STATUSES = ["new", "contacted", "approved", "sold", "lost"] as const;
 type Status = typeof STATUSES[number];
@@ -28,7 +30,8 @@ export function LeadStatusPicker({ leadId, status }: { leadId: string; status: S
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-start sm:items-end gap-1.5">
+      <span className="text-xs text-muted-foreground">Pipeline</span>
       <div className="flex flex-wrap gap-1.5">
         {STATUSES.map((s) => (
           <button
@@ -36,17 +39,19 @@ export function LeadStatusPicker({ leadId, status }: { leadId: string; status: S
             type="button"
             disabled={pending}
             onClick={() => update(s)}
-            className={`cap-label border px-3 py-1.5 transition-colors ${
+            className={cn(
+              "rounded-full px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 capitalize",
               s === status
-                ? "border-foreground bg-foreground text-background"
-                : "border-foreground/30 text-foreground hover:border-foreground"
-            }`}
+                ? "bg-foreground text-background"
+                : "bg-secondary text-foreground hover:bg-secondary/70"
+            )}
           >
+            {pending && s === status && <Loader2 size={12} className="inline mr-1 animate-spin" />}
             {s}
           </button>
         ))}
       </div>
-      {error && <p className="cap-label text-destructive">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }

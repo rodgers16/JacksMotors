@@ -6,6 +6,7 @@ import { db } from "@/lib/db/client";
 import { creditApplications } from "@/lib/db/schema";
 import { decryptJSON } from "@/lib/crypto";
 import { LeadStatusPicker } from "@/components/admin/LeadStatusPicker";
+import { AdminCard } from "@/components/admin/AdminUI";
 
 type Params = Promise<{ id: string }>;
 
@@ -27,44 +28,47 @@ export default async function LeadDetailPage({ params }: { params: Params }) {
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
+    <div className="mx-auto max-w-[900px] px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
       <Link
         href="/admin/leads"
-        className="cap-label inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft size={13} /> All leads
+        <ArrowLeft size={14} /> Back to leads
       </Link>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">{new Date(lead.submittedAt).toLocaleString()}</p>
-          <h1 className="font-display mt-3 text-balance text-3xl leading-[0.95] sm:text-5xl">
+          <p className="text-sm text-muted-foreground">{new Date(lead.submittedAt).toLocaleString()}</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             {lead.contactName}
           </h1>
         </div>
         <LeadStatusPicker leadId={lead.id} status={lead.status} />
       </div>
 
-      <dl className="mt-10 grid gap-px border-y border-[hsl(var(--border))] bg-[hsl(var(--border))] sm:grid-cols-2">
-        <Row label="Email"   value={lead.contactEmail} />
-        <Row label="Phone"   value={lead.contactPhone} />
-        {lead.vehicleTitle && <Row label="Vehicle" value={lead.vehicleTitle} />}
-        {lead.ip && <Row label="IP" value={lead.ip} />}
-      </dl>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <AdminCard title="Email">
+          <a href={`mailto:${lead.contactEmail}`} className="text-blue-600 hover:underline break-all">
+            {lead.contactEmail}
+          </a>
+        </AdminCard>
+        <AdminCard title="Phone">
+          <a href={`tel:${lead.contactPhone}`} className="text-blue-600 hover:underline">
+            {lead.contactPhone}
+          </a>
+        </AdminCard>
+        {lead.vehicleTitle && (
+          <AdminCard title="Vehicle of interest" className="sm:col-span-2">
+            <p>{lead.vehicleTitle}</p>
+          </AdminCard>
+        )}
+      </div>
 
-      <h2 className="font-display mt-12 text-2xl">Application</h2>
-      <pre className="mt-4 max-h-[60vh] overflow-auto border border-[hsl(var(--border))] bg-card p-5 text-sm font-mono text-foreground">
-        {JSON.stringify(payload, null, 2)}
-      </pre>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-background p-5">
-      <dt className="cap-label text-muted-foreground/60">{label}</dt>
-      <dd className="mt-2 text-foreground">{value}</dd>
+      <AdminCard title="Application data" description="Decrypted from encrypted storage." className="mt-4">
+        <pre className="max-h-[60vh] overflow-auto rounded-lg bg-secondary p-4 text-sm font-mono text-foreground">
+{JSON.stringify(payload, null, 2)}
+        </pre>
+      </AdminCard>
     </div>
   );
 }

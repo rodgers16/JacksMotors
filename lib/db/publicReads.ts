@@ -61,7 +61,7 @@ function fromDb(v: VehicleWithPhotos): PublicVehicle {
     fuel: v.fuel,
     transmission: v.transmission,
     price: Math.round(v.priceCents / 100),
-    mileage: v.mileageKm,
+    mileage: v.mileage,
     badges: v.badges ?? [],
     image: photo?.url ?? "",
     blur: photo?.blur ?? null,

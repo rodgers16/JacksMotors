@@ -46,8 +46,8 @@ export async function listPublicVehicles(f: PublicFilters = {}): Promise<Vehicle
   const orderBy =
     f.sort === "price-asc"   ? [asc(vehicles.priceCents)]                       :
     f.sort === "price-desc"  ? [desc(vehicles.priceCents)]                      :
-    f.sort === "mileage-asc" ? [asc(vehicles.mileageKm)]                        :
-    /* newest */               [desc(vehicles.year), asc(vehicles.mileageKm)];
+    f.sort === "mileage-asc" ? [asc(vehicles.mileage)]                        :
+    /* newest */               [desc(vehicles.year), asc(vehicles.mileage)];
 
   const rows = await db
     .select()
@@ -149,4 +149,4 @@ export async function listLeads() {
   return db.select().from(creditApplications).orderBy(desc(creditApplications.submittedAt));
 }
 
-export type VehicleLite = Pick<Vehicle, "id" | "slug" | "year" | "make" | "model" | "trim" | "priceCents" | "mileageKm" | "body" | "drivetrain" | "fuel">;
+export type VehicleLite = Pick<Vehicle, "id" | "slug" | "year" | "make" | "model" | "trim" | "priceCents" | "mileage" | "body" | "drivetrain" | "fuel">;

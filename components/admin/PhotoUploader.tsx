@@ -109,15 +109,20 @@ export function PhotoUploader({ vehicleId, initialPhotos }: Props) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <span className="cap-label text-muted-foreground/60">
-          Photos {photos.length > 0 && <span className="text-foreground">· {photos.length}</span>}
+        <span className="text-sm text-muted-foreground">
+          {photos.length === 0 ? "No photos yet" : (
+            <>
+              <span className="font-medium text-foreground">{photos.length}</span>
+              {photos.length === 1 ? " photo" : " photos"}
+            </>
+          )}
         </span>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="cap-label inline-flex items-center gap-2 border border-foreground/30 px-4 py-2 hover:border-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-secondary text-foreground px-3 py-2 text-sm font-medium hover:bg-secondary/70 transition-colors"
         >
-          <Plus size={13} aria-hidden /> Add photos
+          <Plus size={14} aria-hidden /> Add photos
         </button>
         <input
           ref={inputRef}
@@ -144,18 +149,18 @@ export function PhotoUploader({ vehicleId, initialPhotos }: Props) {
               <li
                 key={p.id}
                 className={cn(
-                  "relative aspect-[4/3] overflow-hidden border",
-                  p.status === "error" ? "border-destructive" : "border-foreground/30"
+                  "relative aspect-[4/3] overflow-hidden rounded-lg border",
+                  p.status === "error" ? "border-destructive" : "border-[hsl(var(--border))]"
                 )}
               >
-                <img src={p.previewUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-50" />
-                <div className="absolute inset-0 flex items-center justify-center bg-background/40">
-                  <p className="cap-label text-foreground">
+                <img src={p.previewUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+                <div className="absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
+                  <p className="text-sm font-medium text-foreground">
                     {p.status === "error" ? "Failed" : "Uploading…"}
                   </p>
                 </div>
                 {p.status === "error" && (
-                  <p className="absolute inset-x-2 bottom-2 cap-label text-destructive truncate">{p.error}</p>
+                  <p className="absolute inset-x-2 bottom-2 text-xs text-destructive truncate">{p.error}</p>
                 )}
               </li>
             ))}
@@ -164,10 +169,11 @@ export function PhotoUploader({ vehicleId, initialPhotos }: Props) {
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  className="flex w-full flex-col items-center justify-center gap-3 border border-dashed border-foreground/30 py-16 hover:border-foreground transition-colors"
+                  className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[hsl(var(--border))] py-12 hover:border-accent hover:bg-accent/5 transition-colors"
                 >
                   <Plus size={20} aria-hidden className="text-muted-foreground" />
-                  <span className="cap-label text-muted-foreground">Tap to add photos</span>
+                  <span className="text-sm font-medium text-foreground">Tap to add photos</span>
+                  <span className="text-xs text-muted-foreground">JPEG, PNG, or HEIC · up to 20</span>
                 </button>
               </li>
             )}
@@ -199,8 +205,8 @@ function SortablePhotoTile({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative aspect-[4/3] overflow-hidden border border-[hsl(var(--border))] bg-card touch-none",
-        isDragging && "opacity-80 ring-1 ring-foreground"
+        "relative aspect-[4/3] overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-secondary touch-none",
+        isDragging && "ring-2 ring-accent shadow-lg"
       )}
     >
       <Image
@@ -213,14 +219,14 @@ function SortablePhotoTile({
         blurDataURL={photo.blur ?? undefined}
       />
       {index === 0 && (
-        <span className="absolute left-2 top-2 cap-label bg-foreground text-background px-2 py-1">Cover</span>
+        <span className="absolute left-2 top-2 rounded-full bg-foreground text-background px-2 py-0.5 text-xs font-medium">Cover</span>
       )}
       <button
         type="button"
         {...attributes}
         {...listeners}
         aria-label="Drag to reorder"
-        className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center bg-background/80 backdrop-blur-sm cursor-grab active:cursor-grabbing"
+        className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-foreground shadow-sm cursor-grab active:cursor-grabbing"
       >
         <GripVertical size={14} aria-hidden />
       </button>
@@ -228,7 +234,7 @@ function SortablePhotoTile({
         type="button"
         onClick={onRemove}
         aria-label="Remove photo"
-        className="absolute right-2 bottom-2 inline-flex h-8 w-8 items-center justify-center bg-background/80 backdrop-blur-sm hover:bg-destructive hover:text-destructive-foreground transition-colors"
+        className="absolute right-2 bottom-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-foreground shadow-sm hover:bg-destructive hover:text-destructive-foreground transition-colors"
       >
         <X size={14} aria-hidden />
       </button>

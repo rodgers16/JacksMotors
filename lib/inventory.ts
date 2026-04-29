@@ -22,9 +22,9 @@ export type Vehicle = {
   image: string;
 };
 
-const fmt = (n: number) => new Intl.NumberFormat("en-CA").format(n);
+const fmt = (n: number) => new Intl.NumberFormat("en-US").format(n);
 export const formatPrice = (n: number) => `$${fmt(n)}`;
-export const formatMileage = (n: number) => `${fmt(n)} km`;
+export const formatMileage = (n: number) => `${fmt(n)} mi`;
 
 const u = (id: string) =>
   `https://images.unsplash.com/photo-${id}?w=1600&q=80&auto=format&fit=crop`;

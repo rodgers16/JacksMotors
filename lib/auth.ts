@@ -1,9 +1,11 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthConfig } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { Resend } from "resend";
 import { db } from "./db/client";
 import { users, accounts, sessions, verificationTokens } from "./db/schema";
 import { site } from "./site";
+import { verifyPassword } from "./passwords";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -12,58 +14,88 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
+const dbConfigured = Boolean(process.env.DATABASE_URL);
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
-  session: { strategy: "database" },
+  // Adapter only when DB is configured. With Credentials + JWT, login still works
+  // without a DB; magic-link requires it.
+  adapter: dbConfigured
+    ? DrizzleAdapter(db, {
+        usersTable: users,
+        accountsTable: accounts,
+        sessionsTable: sessions,
+        verificationTokensTable: verificationTokens,
+      })
+    : undefined,
+  // JWT strategy is required when using the Credentials provider.
+  session: { strategy: "jwt" },
   pages: {
     signIn: "/admin/login",
     verifyRequest: "/admin/login?check-email=1",
     error: "/admin/login?error=1",
   },
-  providers: [
-    {
+  providers: buildProviders(),
+  callbacks: {
+    async signIn({ user }) {
+      if (ADMIN_EMAILS.length === 0) return true; // dev: permissive
+      const email = user.email?.toLowerCase();
+      return Boolean(email && ADMIN_EMAILS.includes(email));
+    },
+    async jwt({ token, user }) {
+      if (user?.email) token.email = user.email;
+      return token;
+    },
+    async session({ session, token }) {
+      if (token?.email && session.user) session.user.email = token.email as string;
+      return session;
+    },
+  },
+});
+
+function buildProviders(): NextAuthConfig["providers"] {
+  const providers: NextAuthConfig["providers"] = [
+    Credentials({
+      name: "Password",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(creds) {
+        const email = String(creds?.email ?? "").trim().toLowerCase();
+        const password = String(creds?.password ?? "");
+        if (!email || !password) return null;
+        if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(email)) return null;
+        const expectedHash = process.env.ADMIN_PASSWORD_HASH;
+        if (!expectedHash) return null;
+        if (!verifyPassword(password, expectedHash)) return null;
+        return { id: email, email, name: email.split("@")[0] };
+      },
+    }),
+  ];
+
+  // Magic-link only when both DB adapter and Resend are configured.
+  if (dbConfigured && resend) {
+    providers.push({
       id: "magic-link",
       name: "Magic Link",
       type: "email",
       maxAge: 15 * 60,
       from: process.env.RESEND_FROM ?? "Jacks Motors <auth@example.com>",
-      async sendVerificationRequest({ identifier: email, url }) {
-        if (!resend) {
-          console.log("[auth] (dev — no RESEND_API_KEY) magic link for", email, ":", url);
-          return;
-        }
-        if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(email.toLowerCase())) {
-          console.warn("[auth] rejected non-admin email:", email);
-          // We still pretend success to avoid leaking which emails are admins.
-          return;
-        }
-        const { error } = await resend.emails.send({
+      async sendVerificationRequest({ identifier: email, url }: { identifier: string; url: string }) {
+        if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(email.toLowerCase())) return;
+        const { error } = await resend!.emails.send({
           from: process.env.RESEND_FROM ?? "Jacks Motors <auth@example.com>",
           to: email,
           subject: `Sign in to ${site.name}`,
           html: renderEmail({ url }),
         });
-        if (error) {
-          console.error("[auth] resend error:", error);
-          throw new Error("Failed to send sign-in email.");
-        }
+        if (error) throw new Error("Failed to send sign-in email.");
       },
-    },
-  ],
-  callbacks: {
-    async signIn({ user }) {
-      // Hard gate: only allowlisted emails get a session.
-      if (ADMIN_EMAILS.length === 0) return true; // dev mode: anything goes
-      const email = user.email?.toLowerCase();
-      return Boolean(email && ADMIN_EMAILS.includes(email));
-    },
-  },
-});
+    });
+  }
+
+  return providers;
+}
 
 function renderEmail({ url }: { url: string }) {
   const safeUrl = url.replace(/[<>"']/g, "");

@@ -34,11 +34,61 @@ export function Nav() {
   }, [open]);
 
   return (
+    <>
+    {/* Full-screen overlay menu — rendered as a sibling of the header so no ancestor
+        stacking context can put hero content above it. */}
+    <div
+      className={cn(
+        "fixed inset-0 z-[60] transition-opacity duration-300",
+        open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      )}
+      style={{ backgroundColor: "#020817" }}
+      aria-hidden={!open}
+    >
+      <div className="mx-auto flex h-full max-w-[1600px] flex-col px-5 pb-10 pt-24 sm:px-8 lg:px-12 lg:pt-28">
+        <p className="eyebrow">Navigate</p>
+        <ul className="mt-8 flex flex-col">
+          {links.map((l, i) => (
+            <li key={l.href} className="border-b border-[hsl(var(--border))]">
+              <Link
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className="font-display group flex items-center justify-between py-5 text-3xl text-foreground transition-colors hover:text-muted-foreground sm:text-5xl"
+              >
+                <span className="flex items-baseline gap-4">
+                  <span className="cap-label text-muted-foreground/60 w-8 shrink-0">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  {l.label}
+                </span>
+                <span aria-hidden className="text-muted-foreground/60 transition-transform duration-300 group-hover:translate-x-1">→</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-auto pt-8 flex flex-wrap items-end justify-between gap-6 text-sm">
+          <div>
+            <p className="eyebrow mb-2">Visit</p>
+            <p className="text-foreground">{site.address.street}</p>
+            <p className="text-muted-foreground">{site.address.city}, {site.address.region}</p>
+          </div>
+          <div>
+            <p className="eyebrow mb-2">Call</p>
+            <a href={site.phoneHref} className="text-foreground hover:text-muted-foreground transition-colors">{site.phone}</a>
+          </div>
+        </div>
+      </div>
+    </div>
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-colors duration-300",
-        scrolled || open ? "bg-background/95 backdrop-blur-md border-b border-[hsl(var(--border))]" : "bg-transparent border-b border-transparent"
+        "fixed inset-x-0 top-0 z-[70] transition-colors duration-300",
+        scrolled || open ? "backdrop-blur-md border-b border-[hsl(var(--border))]" : "border-b border-transparent"
       )}
+      style={
+        scrolled || open
+          ? { backgroundColor: "hsl(var(--background) / 0.95)" }
+          : { backgroundColor: "transparent" }
+      }
     >
       <div className="mx-auto grid h-16 max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center px-5 sm:px-8 lg:h-[72px] lg:px-12">
         {/* Left — MENU */}
@@ -80,48 +130,7 @@ export function Nav() {
         </div>
       </div>
 
-      {/* Full-screen overlay menu */}
-      <div
-        className={cn(
-          "fixed inset-0 top-16 lg:top-[72px] z-40 bg-background transition-opacity duration-300",
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        )}
-        aria-hidden={!open}
-      >
-        <div className="mx-auto flex h-full max-w-[1600px] flex-col px-5 pb-10 pt-8 sm:px-8 lg:px-12">
-          <p className="eyebrow">Navigate</p>
-          <ul className="mt-8 flex flex-col">
-            {links.map((l, i) => (
-              <li key={l.href} className="border-b border-[hsl(var(--border))]">
-                <Link
-                  href={l.href}
-                  onClick={() => setOpen(false)}
-                  className="font-display group flex items-center justify-between py-5 text-3xl text-foreground transition-colors hover:text-muted-foreground sm:text-5xl"
-                >
-                  <span className="flex items-baseline gap-4">
-                    <span className="cap-label text-muted-foreground/60 w-8 shrink-0">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    {l.label}
-                  </span>
-                  <span aria-hidden className="text-muted-foreground/60 transition-transform duration-300 group-hover:translate-x-1">→</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-auto pt-8 flex flex-wrap items-end justify-between gap-6 text-sm">
-            <div>
-              <p className="eyebrow mb-2">Visit</p>
-              <p className="text-foreground">{site.address.street}</p>
-              <p className="text-muted-foreground">{site.address.city}, {site.address.region}</p>
-            </div>
-            <div>
-              <p className="eyebrow mb-2">Call</p>
-              <a href={site.phoneHref} className="text-foreground hover:text-muted-foreground transition-colors">{site.phone}</a>
-            </div>
-          </div>
-        </div>
-      </div>
     </header>
+    </>
   );
 }

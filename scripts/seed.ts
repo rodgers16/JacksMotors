@@ -58,7 +58,7 @@ async function main() {
     drivetrain: v.drivetrain,
     fuel: v.fuel,
     priceCents: v.price * 100,
-    mileageKm: v.mileage,
+    mileage: v.mileage,
     badges: v.badges ?? [],
     publishedAt: new Date(),
   }));

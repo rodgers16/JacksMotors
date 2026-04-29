@@ -1,86 +1,81 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { signIn } from "@/lib/auth";
-import { Logo } from "@/components/site/Logo";
-import { Input } from "@/components/ui/Field";
+import { AdminButton, AdminCard, AdminField, AdminInput, AdminBanner } from "@/components/admin/AdminUI";
 
 export const metadata: Metadata = {
   title: "Sign In",
   robots: { index: false, follow: false },
 };
 
-type SearchParams = Promise<{ "check-email"?: string; error?: string; from?: string }>;
+type SearchParams = Promise<{ error?: string; from?: string }>;
 
 export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
-  const checkEmail = !!params["check-email"];
   const error = !!params.error;
+  const from = params.from || "/admin";
 
-  async function sendLink(formData: FormData) {
+  async function loginWithPassword(formData: FormData) {
     "use server";
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
-    if (!email) return;
-    await signIn("magic-link", { email, redirectTo: "/admin" });
+    const password = String(formData.get("password") ?? "");
+    if (!email || !password) return;
+    await signIn("credentials", { email, password, redirectTo: from });
   }
 
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center px-5 py-12">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center"><Logo /></div>
-
-        <div className="mt-12 border border-[hsl(var(--border))] p-8 sm:p-10">
-          <p className="eyebrow">Admin</p>
-          <h1 className="font-display mt-3 text-3xl text-foreground sm:text-4xl">
-            {checkEmail ? "Check your inbox." : "Sign in"}
-          </h1>
-
-          {checkEmail ? (
-            <p className="mt-4 text-muted-foreground leading-relaxed">
-              We sent a sign-in link to your email. Click it within 15 minutes to
-              continue. You can close this tab.
-            </p>
-          ) : (
-            <>
-              <p className="mt-4 text-muted-foreground leading-relaxed">
-                Enter your email and we'll send you a one-time sign-in link.
-              </p>
-
-              {error && (
-                <p className="mt-4 border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  Something went wrong. Try again, or check that your email is on the admin allowlist.
-                </p>
-              )}
-
-              <form action={sendLink} className="mt-8 space-y-5">
-                <label className="block">
-                  <span className="cap-label text-muted-foreground/60 mb-2 block">Email</span>
-                  <Input
-                    type="email"
-                    name="email"
-                    required
-                    autoFocus
-                    autoComplete="email"
-                    inputMode="email"
-                    placeholder="you@example.com"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="cap-label w-full rounded-full bg-foreground text-background py-4 hover:bg-foreground/90 transition-colors"
-                >
-                  Send sign-in link
-                </button>
-              </form>
-            </>
-          )}
+    <div className="admin-theme min-h-screen bg-background flex items-center justify-center px-4 py-12">
+      <main className="w-full max-w-md">
+        <div className="flex justify-center">
+          <Link href="/" className="flex items-center gap-2 text-foreground font-semibold tracking-tight">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-foreground text-background text-sm">JM</span>
+            <span>Jacks Motors</span>
+          </Link>
         </div>
 
-        <p className="mt-8 text-center">
-          <Link href="/" className="bug-cta-underline text-muted-foreground hover:text-foreground">
+        <AdminCard className="mt-8">
+          <h1 className="text-2xl font-semibold text-foreground">Sign in</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Admin access only.</p>
+
+          {error && (
+            <AdminBanner tone="danger" className="mt-5">
+              Invalid email or password.
+            </AdminBanner>
+          )}
+
+          <form action={loginWithPassword} className="mt-6 space-y-4">
+            <AdminField label="Email" required>
+              <AdminInput
+                type="email"
+                name="email"
+                required
+                autoFocus
+                autoComplete="username"
+                inputMode="email"
+                placeholder="you@example.com"
+              />
+            </AdminField>
+            <AdminField label="Password" required>
+              <AdminInput
+                type="password"
+                name="password"
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+              />
+            </AdminField>
+            <AdminButton type="submit" size="lg" className="w-full">
+              Sign in
+            </AdminButton>
+          </form>
+        </AdminCard>
+
+        <p className="mt-6 text-center text-sm">
+          <Link href="/" className="text-muted-foreground hover:text-foreground">
             ← Back to site
           </Link>
         </p>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

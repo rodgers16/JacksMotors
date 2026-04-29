@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       exteriorColor: v.exteriorColor || null,
       interiorColor: v.interiorColor || null,
       priceCents: v.price * 100,
-      mileageKm: v.mileage,
+      mileage: v.mileage,
       description: v.description || null,
       badges: v.badges,
       carfaxUrl: v.carfaxUrl || null,

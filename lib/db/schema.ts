@@ -76,7 +76,8 @@ export const vehicles = pgTable(
     interiorColor: text("interior_color"),
     /** Stored in cents to avoid float drift; format to dollars at the boundary. */
     priceCents: integer("price_cents").notNull(),
-    mileageKm: integer("mileage_km").notNull(),
+    /** Stored as miles (US). Column name kept as "mileage_km" to preserve existing migration. */
+    mileage: integer("mileage_km").notNull(),
     description: text("description"),
     badges: text("badges").array().notNull().default(sql`ARRAY[]::text[]`),
     carfaxUrl: text("carfax_url"),

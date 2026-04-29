@@ -1,8 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { listAllVehicles } from "@/lib/db/queries";
 import { formatPrice, formatMileage } from "@/lib/inventory";
+import { AdminLinkButton, AdminBanner, AdminPill } from "@/components/admin/AdminUI";
 
 export default async function AdminInventoryPage() {
   let vehicles: Awaited<ReturnType<typeof listAllVehicles>> = [];
@@ -14,100 +15,98 @@ export default async function AdminInventoryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] px-5 py-12 sm:px-8 lg:px-12 lg:py-16">
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="eyebrow">Inventory</p>
-          <h1 className="font-display mt-3 text-balance text-4xl leading-[0.95] sm:text-6xl">
-            All vehicles
-          </h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Inventory</h1>
           {!dbError && (
-            <p className="mt-3 cap-label text-muted-foreground">
-              <span className="text-foreground">{vehicles.length}</span> total
+            <p className="mt-1 text-sm text-muted-foreground">
+              {vehicles.length} {vehicles.length === 1 ? "vehicle" : "vehicles"} total
             </p>
           )}
         </div>
-        <Link
-          href="/admin/inventory/new"
-          className="cap-label inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-background hover:bg-foreground/90 transition-colors self-start"
-        >
-          <Plus size={14} aria-hidden /> New Car
-        </Link>
+        <AdminLinkButton href="/admin/inventory/new" size="lg">
+          <Plus size={16} aria-hidden /> New car
+        </AdminLinkButton>
       </div>
 
       {dbError && (
-        <div className="mt-10 border border-destructive/40 bg-destructive/10 p-6">
-          <p className="cap-label text-destructive">Database error</p>
-          <p className="mt-2 text-foreground text-sm">{dbError}</p>
-        </div>
+        <AdminBanner tone="warn" className="mt-6">
+          <p className="font-semibold">Database not configured</p>
+          <p className="mt-1 text-sm">{dbError}</p>
+        </AdminBanner>
       )}
 
       {!dbError && vehicles.length === 0 && (
-        <div className="mt-12 border border-[hsl(var(--border))] py-20 text-center">
-          <p className="font-display text-3xl">No vehicles yet.</p>
-          <p className="mt-3 text-muted-foreground">Add the first one to get started.</p>
-          <Link
-            href="/admin/inventory/new"
-            className="cap-label mt-8 inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-background hover:bg-foreground/90 transition-colors"
-          >
-            <Plus size={14} aria-hidden /> New Car
-          </Link>
+        <div className="mt-12 rounded-2xl border border-dashed border-[hsl(var(--border))] bg-card p-12 text-center">
+          <p className="text-xl font-semibold text-foreground">No vehicles yet</p>
+          <p className="mt-2 text-muted-foreground">Add your first car to get started.</p>
+          <div className="mt-6">
+            <AdminLinkButton href="/admin/inventory/new">
+              <Plus size={15} aria-hidden /> Add a vehicle
+            </AdminLinkButton>
+          </div>
         </div>
       )}
 
       {!dbError && vehicles.length > 0 && (
-        <ul className="mt-10 divide-y divide-[hsl(var(--border))] border-y border-[hsl(var(--border))]">
-          {vehicles.map((v) => (
-            <li key={v.id}>
-              <Link
-                href={`/admin/inventory/${v.id}/edit`}
-                className="grid grid-cols-[80px_1fr_auto] items-center gap-4 py-4 hover:bg-foreground/[0.02] transition-colors sm:grid-cols-[120px_1fr_auto_auto] sm:gap-6 sm:py-5"
-              >
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-card">
-                  {v.photos[0] ? (
-                    <Image
-                      src={v.photos[0].url}
-                      alt=""
-                      fill
-                      sizes="120px"
-                      className="object-cover"
-                      placeholder={v.photos[0].blur ? "blur" : "empty"}
-                      blurDataURL={v.photos[0].blur ?? undefined}
-                    />
-                  ) : null}
-                </div>
-                <div className="min-w-0">
-                  <p className="cap-label text-muted-foreground/60">{v.year} · {v.body}</p>
-                  <p className="font-display mt-1 text-lg text-foreground truncate sm:text-xl">
-                    {v.make} {v.model} {v.trim ? <span className="text-muted-foreground font-sans normal-case tracking-normal text-base">{v.trim}</span> : null}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{formatMileage(v.mileageKm)} · {v.drivetrain} · {v.fuel}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-display text-lg text-foreground sm:text-xl">{formatPrice(Math.round(v.priceCents / 100))}</p>
-                  <StatusBadge status={v.status} />
-                </div>
-                <span aria-hidden className="cap-label text-muted-foreground hidden sm:inline">→</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-6 overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-card">
+          <ul className="divide-y divide-[hsl(var(--border))]">
+            {vehicles.map((v) => (
+              <li key={v.id}>
+                <Link
+                  href={`/admin/inventory/${v.id}/edit`}
+                  className="grid grid-cols-[64px_1fr_auto] items-center gap-3 px-3 py-3 hover:bg-secondary transition-colors sm:grid-cols-[96px_1fr_auto_auto] sm:gap-4 sm:px-4 sm:py-4"
+                >
+                  <div className="relative aspect-square overflow-hidden rounded-lg bg-secondary">
+                    {v.photos[0] ? (
+                      <Image
+                        src={v.photos[0].url}
+                        alt=""
+                        fill
+                        sizes="96px"
+                        className="object-cover"
+                        placeholder={v.photos[0].blur ? "blur" : "empty"}
+                        blurDataURL={v.photos[0].blur ?? undefined}
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No photo</div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground truncate text-base">
+                      {v.year} {v.make} {v.model}
+                      {v.trim && <span className="font-normal text-muted-foreground"> {v.trim}</span>}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">
+                      {formatMileage(v.mileage)} · {v.body} · {v.drivetrain} · {v.fuel}
+                    </p>
+                    <div className="mt-1.5 sm:hidden">
+                      <StatusPill status={v.status} />
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-semibold text-foreground">{formatPrice(Math.round(v.priceCents / 100))}</p>
+                  </div>
+                  <div className="hidden sm:block">
+                    <StatusPill status={v.status} />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const palette: Record<string, string> = {
-    available: "text-foreground border-foreground/40",
-    pending: "text-foreground border-foreground/40",
-    draft: "text-muted-foreground border-muted-foreground/40",
-    sold: "text-muted-foreground border-muted-foreground/40 line-through",
-    hidden: "text-muted-foreground/60 border-muted-foreground/30",
-  };
-  return (
-    <span className={`cap-label mt-1 inline-block border px-2 py-0.5 ${palette[status] ?? palette.draft}`}>
-      {status}
-    </span>
-  );
+function StatusPill({ status }: { status: string }) {
+  const tone =
+    status === "available" ? "success" :
+    status === "pending"   ? "info" :
+    status === "sold"      ? "neutral" :
+    status === "hidden"    ? "neutral" :
+    /* draft */              "warn";
+  return <AdminPill tone={tone}>{status}</AdminPill>;
 }

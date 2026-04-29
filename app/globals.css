@@ -26,6 +26,31 @@
   --tracking-widest: 0.1em;
 }
 
+/* Admin theme — easy on the eyes: soft tinted-gray page, off-white cards, dark
+   (but not pure black) text, visible borders. Avoids the harsh white-on-white feel. */
+.admin-theme {
+  --background: 220 14% 90%;          /* ~#dee1e6 — soft cool gray page */
+  --foreground: 222 22% 18%;          /* ~#262c36 — dark slate, easier than #000 */
+  --card: 220 20% 97%;                /* ~#f3f5f8 — off-white, gently floats above bg */
+  --card-foreground: 222 22% 18%;
+  --popover: 220 20% 97%;
+  --popover-foreground: 222 22% 18%;
+  --primary: 222 22% 18%;             /* dark filled buttons */
+  --primary-foreground: 220 20% 97%;
+  --secondary: 220 14% 86%;           /* darker hover gray */
+  --secondary-foreground: 222 22% 18%;
+  --muted: 220 14% 86%;
+  --muted-foreground: 220 10% 40%;    /* ~#5d6470 — comfortable mid-gray text */
+  --accent: 217 85% 54%;              /* blue, slightly less bright than 60% */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 60% 50%;           /* softer red */
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 14% 78%;              /* ~#bfc3cc — visible but not harsh */
+  --input: 220 14% 78%;
+  --ring: 217 85% 54%;
+  --radius: 0.5rem;
+}
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -171,6 +196,153 @@ input::placeholder, textarea::placeholder {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
+
+/* ── Admin-only motion ─────────────────────────────────────────── */
+
+@keyframes admin-pop-in {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.96); }
+  60%  { opacity: 1; transform: translateY(-2px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes admin-success-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.0); }
+  50%      { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.18); }
+}
+
+@keyframes admin-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.0); }
+  30%      { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25); }
+}
+
+@keyframes admin-checkmark-draw {
+  from { stroke-dashoffset: 24; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes admin-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* The headline VIN-verified moment — multi-stage flash, ripple, settle. */
+@keyframes vin-verify {
+  0%   {
+    transform: scale(1);
+    border-color: rgb(16 185 129 / 0);
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0),
+      0 0 0 0 rgba(16, 185, 129, 0);
+  }
+  15%  {
+    transform: scale(1.01);
+    border-color: rgb(16 185 129 / 1);
+    box-shadow:
+      0 0 0 4px rgba(16, 185, 129, 0.45),
+      0 0 24px 4px rgba(16, 185, 129, 0.35);
+  }
+  35%  {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 14px rgba(16, 185, 129, 0),
+      0 0 32px 8px rgba(16, 185, 129, 0.18);
+  }
+  60%  {
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0),
+      0 0 0 4px rgba(16, 185, 129, 0.25);
+  }
+  100% {
+    transform: scale(1);
+    border-color: rgb(16 185 129 / 1);
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0),
+      0 0 0 0 rgba(16, 185, 129, 0.2);
+  }
+}
+
+/* Sweep — a soft green wash that washes across the input field once. */
+@keyframes vin-sweep {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+/* The floating "VIN VERIFIED" pill that pops above the input. */
+@keyframes vin-pill {
+  0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.85); }
+  25%  { opacity: 1; transform: translate(-50%, -8px) scale(1.06); }
+  40%  { transform: translate(-50%, -8px) scale(1); }
+  85%  { opacity: 1; transform: translate(-50%, -8px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -16px) scale(0.95); }
+}
+
+/* Subtle continuous "valid" breathing — applied after the verify animation finishes. */
+@keyframes vin-breathing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.0); }
+  50%      { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12); }
+}
+
+.vin-verifying {
+  animation: vin-verify 1.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  border-width: 2px !important;
+}
+
+.vin-sweep-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.vin-sweep-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(16, 185, 129, 0.18) 50%,
+    transparent 65%,
+    transparent 100%
+  );
+  animation: vin-sweep 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.vin-pill {
+  animation: vin-pill 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.vin-valid-rest {
+  animation: vin-breathing 3s ease-in-out infinite;
+}
+
+.admin-pop {
+  animation: admin-pop-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.admin-pulse-success {
+  animation: admin-success-pulse 1.4s ease-out 1 both;
+}
+
+.admin-glow-success {
+  animation: admin-glow 1s ease-out both;
+}
+
+.admin-shimmer {
+  background-image: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: admin-shimmer 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-pop, .admin-pulse-success, .admin-glow-success, .admin-shimmer {
+    animation: none !important;
+  }
+}
 
 .cinema-vignette {
   background:

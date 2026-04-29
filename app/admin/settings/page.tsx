@@ -1,14 +1,17 @@
+import { AdminCard } from "@/components/admin/AdminUI";
+
 export default function SettingsPage() {
   return (
-    <div className="mx-auto max-w-[1100px] px-5 py-12 sm:px-8 lg:px-12 lg:py-16">
-      <p className="eyebrow">Coming soon</p>
-      <h1 className="font-display mt-3 text-balance text-4xl leading-[0.95] sm:text-6xl">
-        Site settings
-      </h1>
-      <p className="mt-6 max-w-md text-muted-foreground leading-relaxed">
-        Edit hours, address, phone number, social links, and dealer license info
-        from here. For now these live in <code className="font-mono text-sm text-foreground">lib/site.ts</code>.
-      </p>
+    <div className="mx-auto max-w-[800px] px-4 py-8 sm:px-6 lg:py-12">
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Settings</h1>
+      <p className="mt-1 text-muted-foreground">Hours, address, contact, and social.</p>
+
+      <AdminCard className="mt-6" title="Coming soon">
+        <p className="text-muted-foreground">
+          For now, site contact info lives in <code className="font-mono text-sm bg-secondary px-1.5 py-0.5 rounded">lib/site.ts</code>.
+          We'll move this into editable settings once you tell me which fields you'd like to change first.
+        </p>
+      </AdminCard>
     </div>
   );
 }

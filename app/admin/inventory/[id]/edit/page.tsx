@@ -1,14 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { getVehicleById } from "@/lib/db/queries";
 import { VehicleForm } from "@/components/admin/VehicleForm";
+import { AdminBanner } from "@/components/admin/AdminUI";
 import type { VehicleInput } from "@/lib/validation/vehicle";
 
 type Params = Promise<{ id: string }>;
+type SearchParams = Promise<{ created?: string }>;
 
-export default async function EditVehiclePage({ params }: { params: Params }) {
+export default async function EditVehiclePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { id } = await params;
+  const { created } = await searchParams;
   const v = await getVehicleById(id).catch(() => null);
   if (!v) notFound();
 
@@ -25,7 +34,7 @@ export default async function EditVehiclePage({ params }: { params: Params }) {
     exteriorColor: v.exteriorColor ?? "",
     interiorColor: v.interiorColor ?? "",
     price: Math.round(v.priceCents / 100),
-    mileage: v.mileageKm,
+    mileage: v.mileage,
     description: v.description ?? "",
     badges: v.badges ?? [],
     carfaxUrl: v.carfaxUrl ?? "",
@@ -42,35 +51,32 @@ export default async function EditVehiclePage({ params }: { params: Params }) {
   }));
 
   return (
-    <div className="mx-auto max-w-[1100px] px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
-      <Link
-        href="/admin/inventory"
-        className="cap-label inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft size={13} /> All vehicles
-      </Link>
-
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mx-auto max-w-[800px] px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="eyebrow">Editing</p>
-          <h1 className="font-display mt-3 text-balance text-3xl leading-[0.95] sm:text-5xl">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             {v.year} {v.make} {v.model}
           </h1>
+          {v.trim && <p className="mt-1 text-muted-foreground">{v.trim}</p>}
         </div>
         {(v.status === "available" || v.status === "pending") && (
           <Link
             href={`/inventory/${v.slug}`}
             target="_blank"
-            className="cap-label inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors self-start"
+            className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:underline"
           >
-            View live <ExternalLink size={12} aria-hidden />
+            View live <ExternalLink size={13} aria-hidden />
           </Link>
         )}
       </div>
 
-      <div className="mt-10">
-        <VehicleForm mode="edit" vehicleId={v.id} initial={initial} initialPhotos={photos} />
-      </div>
+      {created && (
+        <AdminBanner tone="success" className="mb-5">
+          Saved. Now upload photos below — drag to reorder.
+        </AdminBanner>
+      )}
+
+      <VehicleForm mode="edit" vehicleId={v.id} initial={initial} initialPhotos={photos} />
     </div>
   );
 }

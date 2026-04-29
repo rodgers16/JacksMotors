@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { listLeads } from "@/lib/db/queries";
+import { AdminBanner, AdminPill } from "@/components/admin/AdminUI";
 
 const statusOrder: Record<string, number> = { new: 0, contacted: 1, approved: 2, sold: 3, lost: 4 };
+const statusTone: Record<string, "info" | "warn" | "success" | "neutral" | "danger"> = {
+  new: "info",
+  contacted: "warn",
+  approved: "success",
+  sold: "success",
+  lost: "neutral",
+};
 
 export default async function LeadsPage() {
   let leads: Awaited<ReturnType<typeof listLeads>> = [];
@@ -19,45 +27,52 @@ export default async function LeadsPage() {
   const statuses = Object.keys(groups).sort((a, b) => (statusOrder[a] ?? 99) - (statusOrder[b] ?? 99));
 
   return (
-    <div className="mx-auto max-w-[1600px] px-5 py-12 sm:px-8 lg:px-12 lg:py-16">
-      <p className="eyebrow">Pipeline</p>
-      <h1 className="font-display mt-3 text-balance text-4xl leading-[0.95] sm:text-6xl">
-        Credit applications
-      </h1>
+    <div className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Credit applications</h1>
+      <p className="mt-1 text-muted-foreground">Move leads through the pipeline as you work them.</p>
 
       {dbError && (
-        <div className="mt-10 border border-destructive/40 bg-destructive/10 p-6">
-          <p className="cap-label text-destructive">Database error</p>
-          <p className="mt-2 text-foreground text-sm">{dbError}</p>
-        </div>
+        <AdminBanner tone="warn" className="mt-6">
+          <p className="font-semibold">Database not configured</p>
+          <p className="mt-1 text-sm">{dbError}</p>
+        </AdminBanner>
       )}
 
       {!dbError && leads.length === 0 && (
-        <p className="mt-10 text-muted-foreground">No applications yet — they'll show here as they come in.</p>
+        <div className="mt-12 rounded-2xl border border-dashed border-[hsl(var(--border))] bg-card p-12 text-center">
+          <p className="text-xl font-semibold text-foreground">No applications yet</p>
+          <p className="mt-2 text-muted-foreground">When customers submit pre-approval requests, they'll appear here.</p>
+        </div>
       )}
 
       {!dbError && statuses.map((status) => (
-        <section key={status} className="mt-10">
-          <h2 className="cap-label text-muted-foreground/60 mb-4">
-            {status} <span className="text-foreground">· {groups[status].length}</span>
-          </h2>
-          <ul className="divide-y divide-[hsl(var(--border))] border-y border-[hsl(var(--border))]">
-            {groups[status].map((l) => (
-              <li key={l.id}>
-                <Link
-                  href={`/admin/leads/${l.id}`}
-                  className="grid grid-cols-1 gap-1 py-4 hover:bg-foreground/[0.02] transition-colors sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-center sm:gap-6"
-                >
-                  <p className="font-display text-lg text-foreground">{l.contactName}</p>
-                  <p className="text-sm text-muted-foreground truncate">{l.contactEmail}</p>
-                  <p className="text-sm text-muted-foreground">{l.vehicleTitle ?? "—"}</p>
-                  <p className="cap-label text-muted-foreground/60">
-                    {new Date(l.submittedAt).toLocaleDateString()}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <section key={status} className="mt-8">
+          <div className="flex items-baseline gap-2 mb-3">
+            <h2 className="text-base font-semibold text-foreground capitalize">{status}</h2>
+            <span className="text-sm text-muted-foreground">· {groups[status].length}</span>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-[hsl(var(--border))] bg-card">
+            <ul className="divide-y divide-[hsl(var(--border))]">
+              {groups[status].map((l) => (
+                <li key={l.id}>
+                  <Link
+                    href={`/admin/leads/${l.id}`}
+                    className="grid grid-cols-1 gap-1.5 px-4 py-4 hover:bg-secondary transition-colors sm:grid-cols-[1fr_1fr_auto_auto] sm:items-center sm:gap-4"
+                  >
+                    <p className="font-semibold text-foreground">{l.contactName}</p>
+                    <p className="text-sm text-muted-foreground truncate">{l.contactEmail}</p>
+                    <p className="text-sm text-muted-foreground">{l.vehicleTitle ?? "—"}</p>
+                    <div className="flex items-center justify-between sm:justify-end gap-3">
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(l.submittedAt).toLocaleDateString()}
+                      </p>
+                      <AdminPill tone={statusTone[l.status]}>{l.status}</AdminPill>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       ))}
     </div>

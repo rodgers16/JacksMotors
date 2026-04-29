@@ -28,8 +28,16 @@ export const vehicleSchema = z.object({
   exteriorColor: z.string().trim().max(40).optional().or(z.literal("")),
   interiorColor: z.string().trim().max(40).optional().or(z.literal("")),
   /** Dollars, integer */
-  price: z.number().int().min(1).max(1_000_000),
-  mileage: z.number().int().min(0).max(999_999),
+  price: z
+    .number({ error: "Enter an asking price" })
+    .int("Asking price must be a whole number")
+    .min(1, "Enter an asking price")
+    .max(1_000_000, "Asking price looks too high"),
+  mileage: z
+    .number({ error: "Enter the mileage" })
+    .int("Mileage must be a whole number")
+    .min(0, "Mileage can't be negative")
+    .max(999_999, "Mileage looks too high"),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
   badges: z.array(z.string().trim().min(1).max(60)).max(40).default([]),
   carfaxUrl: z.string().trim().url().optional().or(z.literal("")),

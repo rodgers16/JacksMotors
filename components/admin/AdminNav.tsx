@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Menu, X } from "lucide-react";
-import { Logo } from "@/components/site/Logo";
 import { cn } from "@/lib/cn";
 
 const links = [
@@ -18,7 +17,6 @@ export function AdminNav() {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
 
-  // Hide on the login page
   if (pathname?.startsWith("/admin/login")) return null;
 
   const isActive = (href: string) => {
@@ -27,18 +25,23 @@ export function AdminNav() {
   };
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40 border-b border-[hsl(var(--border))] bg-background/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-4 px-5 sm:px-8 lg:px-12">
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-[hsl(var(--border))] bg-card/95 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
-          <Logo />
-          <nav className="hidden md:flex items-center gap-6" aria-label="Admin">
+          <Link href="/admin" className="flex items-center gap-2 text-foreground font-semibold tracking-tight">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background text-sm">JM</span>
+            <span className="hidden sm:inline">Jacks Motors</span>
+          </Link>
+          <nav className="hidden md:flex items-center gap-1" aria-label="Admin">
             {links.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
                 className={cn(
-                  "cap-label transition-colors",
-                  isActive(l.href) ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  isActive(l.href)
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                 )}
               >
                 {l.label}
@@ -47,51 +50,62 @@ export function AdminNav() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="hidden md:inline-flex h-9 items-center px-3 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            View site
+          </Link>
           <form action="/api/auth/signout" method="POST" className="hidden md:block">
             <button
               type="submit"
-              className="cap-label inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex h-9 items-center gap-2 px-3 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             >
-              <LogOut size={13} aria-hidden /> Sign out
+              <LogOut size={14} aria-hidden /> Sign out
             </button>
           </form>
           <button
             type="button"
-            className="md:hidden cap-label inline-flex items-center gap-2 text-foreground"
+            className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[hsl(var(--border))] bg-card text-foreground"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
             aria-label={open ? "Close menu" : "Open menu"}
           >
-            {open ? <X size={14} aria-hidden /> : <Menu size={14} aria-hidden />}
+            {open ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
       </div>
 
       {open && (
-        <nav className="md:hidden border-t border-[hsl(var(--border))] bg-background" aria-label="Admin (mobile)">
-          <ul className="px-5 py-2">
+        <nav className="md:hidden border-t border-[hsl(var(--border))] bg-card" aria-label="Admin (mobile)">
+          <ul className="px-4 py-2">
             {links.map((l) => (
-              <li key={l.href} className="border-b border-[hsl(var(--border))] last:border-b-0">
+              <li key={l.href}>
                 <Link
                   href={l.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "block py-4 cap-label",
-                    isActive(l.href) ? "text-foreground" : "text-muted-foreground"
+                    "block px-3 py-3 rounded-lg text-base font-medium",
+                    isActive(l.href) ? "bg-secondary text-foreground" : "text-muted-foreground"
                   )}
                 >
                   {l.label}
                 </Link>
               </li>
             ))}
-            <li className="pt-3">
+            <li className="border-t border-[hsl(var(--border))] mt-2 pt-2">
+              <Link href="/" onClick={() => setOpen(false)} className="block px-3 py-3 rounded-lg text-base text-muted-foreground">
+                View site
+              </Link>
+            </li>
+            <li>
               <form action="/api/auth/signout" method="POST">
                 <button
                   type="submit"
-                  className="cap-label inline-flex items-center gap-2 text-muted-foreground"
+                  className="w-full text-left px-3 py-3 rounded-lg text-base text-muted-foreground inline-flex items-center gap-2"
                 >
-                  <LogOut size={13} aria-hidden /> Sign out
+                  <LogOut size={15} /> Sign out
                 </button>
               </form>
             </li>
