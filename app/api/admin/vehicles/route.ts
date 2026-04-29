@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db/client";
 import { vehicles } from "@/lib/db/schema";
 import { vehicleSchema } from "@/lib/validation/vehicle";
-import { makeSlug } from "@/lib/db/queries";
+import { uniqueSlugFor } from "@/lib/db/queries";
 
 export const runtime = "nodejs";
-
-const shortId = () => Math.random().toString(36).slice(2, 6);
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -26,20 +23,16 @@ export async function POST(req: Request) {
 
   const v = parsed.data;
 
-  // Build a unique slug — retry with a random suffix on collision
-  let slug = makeSlug({ year: v.year, make: v.make, model: v.model, trim: v.trim || null });
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const existing = await db.select({ id: vehicles.id }).from(vehicles).where(eq(vehicles.slug, slug)).limit(1);
-    if (existing.length === 0) break;
-    slug = makeSlug({ year: v.year, make: v.make, model: v.model, trim: v.trim || null, suffix: shortId() });
-  }
+  // New listings always start as drafts. Dealer reviews then explicitly publishes.
+  const status = "draft" as const;
 
-  const isPublic = v.status === "available" || v.status === "pending";
+  const slug = await uniqueSlugFor({ year: v.year, make: v.make, model: v.model, trim: v.trim || null });
+
   const [row] = await db
     .insert(vehicles)
     .values({
       slug,
-      status: v.status,
+      status,
       vin: v.vin || null,
       year: v.year,
       make: v.make,
@@ -56,7 +49,7 @@ export async function POST(req: Request) {
       description: v.description || null,
       badges: v.badges,
       carfaxUrl: v.carfaxUrl || null,
-      publishedAt: isPublic ? new Date() : null,
+      publishedAt: null,
     })
     .returning();
 

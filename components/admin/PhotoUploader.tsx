@@ -91,19 +91,28 @@ export function PhotoUploader({ vehicleId, initialPhotos }: Props) {
     if (!res.ok) setPhotos(prev); // rollback
   };
 
+  const [reorderError, setReorderError] = React.useState<string | null>(null);
   const onDragEnd = async (e: DragEndEvent) => {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
     const oldIdx = photos.findIndex((p) => p.id === active.id);
     const newIdx = photos.findIndex((p) => p.id === over.id);
     if (oldIdx < 0 || newIdx < 0) return;
+    const prev = photos;
     const next = arrayMove(photos, oldIdx, newIdx);
     setPhotos(next);
-    await fetch("/api/admin/photos/reorder", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ vehicleId, photoIds: next.map((p) => p.id) }),
-    });
+    setReorderError(null);
+    try {
+      const res = await fetch("/api/admin/photos/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicleId, photoIds: next.map((p) => p.id) }),
+      });
+      if (!res.ok) throw new Error(`Reorder failed (${res.status})`);
+    } catch (err) {
+      setPhotos(prev);
+      setReorderError(err instanceof Error ? err.message : "Reorder failed — try again.");
+    }
   };
 
   return (
@@ -133,6 +142,12 @@ export function PhotoUploader({ vehicleId, initialPhotos }: Props) {
           onChange={(e) => e.target.files && handleFiles(e.target.files)}
         />
       </div>
+
+      {reorderError && (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {reorderError}
+        </div>
+      )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={photos.map((p) => p.id)} strategy={rectSortingStrategy}>

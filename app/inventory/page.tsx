@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/inventory" },
 };
 
+// Always render the latest DB state — dealer edits show up immediately
+export const dynamic = "force-dynamic";
+
 type SearchParams = Record<string, string | string[] | undefined>;
 
 export default async function InventoryPage({

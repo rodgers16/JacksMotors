@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   vehicles,
@@ -103,8 +103,30 @@ export async function listAvailableSlugs(): Promise<string[]> {
 
 // ---------- Admin reads ----------
 
-export async function listAllVehicles(): Promise<VehicleWithPhotos[]> {
-  const rows = await db.select().from(vehicles).orderBy(desc(vehicles.updatedAt));
+export type AdminListFilters = {
+  status?: "available" | "pending" | "sold" | "hidden" | "draft";
+  q?: string;
+};
+
+export async function listAllVehicles(f: AdminListFilters = {}): Promise<VehicleWithPhotos[]> {
+  const conditions = [];
+  if (f.status) conditions.push(eq(vehicles.status, f.status));
+  if (f.q && f.q.trim()) {
+    const needle = `%${f.q.trim()}%`;
+    const orExpr = or(
+      ilike(vehicles.make, needle),
+      ilike(vehicles.model, needle),
+      ilike(vehicles.trim, needle),
+      ilike(vehicles.vin, needle),
+      sql`${vehicles.year}::text ilike ${needle}`,
+    );
+    if (orExpr) conditions.push(orExpr);
+  }
+
+  const baseQuery = db.select().from(vehicles).$dynamic();
+  const filteredQuery = conditions.length ? baseQuery.where(and(...conditions)) : baseQuery;
+  const rows = await filteredQuery.orderBy(desc(vehicles.updatedAt));
+
   if (rows.length === 0) return [];
   const photos = await db
     .select()
@@ -118,6 +140,21 @@ export async function listAllVehicles(): Promise<VehicleWithPhotos[]> {
     map.set(p.vehicleId, arr);
   }
   return rows.map((v) => ({ ...v, photos: map.get(v.id) ?? [] }));
+}
+
+export type StatusCounts = Record<"available" | "pending" | "sold" | "hidden" | "draft" | "all", number>;
+
+export async function getVehicleStatusCounts(): Promise<StatusCounts> {
+  const rows = await db
+    .select({ status: vehicles.status, count: sql<number>`count(*)::int` })
+    .from(vehicles)
+    .groupBy(vehicles.status);
+  const counts: StatusCounts = { available: 0, pending: 0, sold: 0, hidden: 0, draft: 0, all: 0 };
+  for (const r of rows) {
+    counts[r.status] = Number(r.count);
+    counts.all += Number(r.count);
+  }
+  return counts;
 }
 
 export async function getVehicleById(id: string): Promise<VehicleWithPhotos | null> {
@@ -141,6 +178,29 @@ export function makeSlug(parts: { year: number; make: string; model: string; tri
   return base
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+const shortSuffix = () => Math.random().toString(36).slice(2, 6);
+
+/**
+ * Generate a slug that's unique in the vehicles table. If `excludeId` is
+ * provided, that row's existing slug is allowed (used on edit so a vehicle
+ * doesn't collide with itself).
+ */
+export async function uniqueSlugFor(
+  parts: { year: number; make: string; model: string; trim?: string | null },
+  excludeId?: string
+): Promise<string> {
+  let slug = makeSlug(parts);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const where = excludeId
+      ? and(eq(vehicles.slug, slug), ne(vehicles.id, excludeId))
+      : eq(vehicles.slug, slug);
+    const existing = await db.select({ id: vehicles.id }).from(vehicles).where(where).limit(1);
+    if (existing.length === 0) return slug;
+    slug = makeSlug({ ...parts, suffix: shortSuffix() });
+  }
+  return slug;
 }
 
 // ---------- Lead reads ----------

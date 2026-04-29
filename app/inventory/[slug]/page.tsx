@@ -19,6 +19,11 @@ import { site } from "@/lib/site";
 
 type Params = Promise<{ slug: string }>;
 
+// Always render with the latest DB data so admin edits are reflected immediately.
+// (revalidatePath calls in the admin API routes also work, but rendering dynamically
+// avoids any stale-cache surprises across status changes / slug updates.)
+export const dynamic = "force-dynamic";
+
 export async function generateStaticParams() {
   const slugs = await listAllSlugsPublic();
   return slugs.map((slug) => ({ slug }));
@@ -147,43 +152,73 @@ export default async function VehicleDetailPage({ params }: { params: Params }) 
         <section className="border-b border-[hsl(var(--border))] bg-background">
           <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-12">
             <dl className="grid grid-cols-2 gap-px bg-[hsl(var(--border))] sm:grid-cols-3 lg:grid-cols-6">
-              <Spec label="Year"        value={String(v.year)} />
-              <Spec label="Mileage"     value={formatMileage(v.mileage)} />
-              <Spec label="Body"        value={v.body} />
-              <Spec label="Drivetrain"  value={v.drivetrain} />
-              <Spec label="Fuel"        value={v.fuel} />
+              <Spec label="Year"         value={String(v.year)} />
+              <Spec label="Mileage"      value={formatMileage(v.mileage)} />
+              <Spec label="Body"         value={v.body} />
+              <Spec label="Drivetrain"   value={v.drivetrain} />
+              <Spec label="Fuel"         value={v.fuel} />
               <Spec label="Transmission" value={v.transmission} />
+              {v.exteriorColor && <Spec label="Exterior"  value={v.exteriorColor} />}
+              {v.interiorColor && <Spec label="Interior"  value={v.interiorColor} />}
             </dl>
           </div>
         </section>
 
-        {/* Description placeholder — lives in CMS in Phase 2 */}
-        <section className="bg-background py-20 sm:py-28">
-          <div className="mx-auto grid max-w-[1600px] gap-10 px-5 sm:px-8 lg:grid-cols-12 lg:px-12">
-            <div className="lg:col-span-4">
-              <p className="eyebrow">Walkaround</p>
+        {/* Walkaround — the dealer's own notes */}
+        {v.description && v.description.trim() && (
+          <section className="bg-background py-20 sm:py-28">
+            <div className="mx-auto grid max-w-[1600px] gap-10 px-5 sm:px-8 lg:grid-cols-12 lg:px-12">
+              <div className="lg:col-span-4">
+                <p className="eyebrow">Walkaround</p>
+                <h2 className="font-display mt-4 text-3xl leading-[1.05] sm:text-4xl">
+                  A few notes from the lot.
+                </h2>
+              </div>
+              <div className="lg:col-span-7 lg:col-start-6">
+                <p className="whitespace-pre-line text-muted-foreground leading-relaxed">
+                  {v.description}
+                </p>
+                {v.carfaxUrl && (
+                  <a
+                    href={v.carfaxUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-foreground underline underline-offset-4 hover:no-underline"
+                  >
+                    View Carfax / vehicle history report ↗
+                  </a>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Photo gallery */}
+        {v.photos && v.photos.length > 1 && (
+          <section className="border-t border-[hsl(var(--border))] bg-background py-12 sm:py-16">
+            <div className="mx-auto max-w-[1600px] px-5 sm:px-8 lg:px-12">
+              <p className="eyebrow">Gallery</p>
               <h2 className="font-display mt-4 text-3xl leading-[1.05] sm:text-4xl">
-                A few notes from the lot.
+                {v.photos.length} photos
               </h2>
+              <ul className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                {v.photos.map((p) => (
+                  <li key={p.id} className="relative aspect-[4/3] overflow-hidden bg-card">
+                    <Image
+                      src={p.url}
+                      alt={title}
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      className="object-cover"
+                      placeholder={p.blur ? "blur" : "empty"}
+                      blurDataURL={p.blur ?? undefined}
+                    />
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div className="lg:col-span-7 lg:col-start-6 space-y-5 text-muted-foreground leading-relaxed">
-              <p>
-                Inspected and detailed in our shop the week it arrived. Tires
-                measured at over 70%, brakes within new-spec range, and a fresh
-                oil service before delivery.
-              </p>
-              <p>
-                Two keys, full books, and the original window sticker on file.
-                Carfax available on request — happy to walk you through it before
-                you drive in.
-              </p>
-              <p className="text-foreground/80">
-                Extended warranty options and certified-finance rates available
-                from our lender network. Trade-ins welcome on any vehicle.
-              </p>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Similar vehicles */}
         {others.length > 0 && (

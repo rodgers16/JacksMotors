@@ -54,12 +54,19 @@ export default async function EditVehiclePage({
     <div className="mx-auto max-w-[800px] px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-4xl">
             {v.year} {v.make} {v.model}
           </h1>
-          {v.trim && <p className="mt-1 text-muted-foreground">{v.trim}</p>}
+          {v.trim && <p className="mt-1 text-sm text-muted-foreground sm:text-base">{v.trim}</p>}
         </div>
-        {(v.status === "available" || v.status === "pending") && (
+        {v.status === "draft" ? (
+          <Link
+            href={`/admin/inventory/${v.id}/review`}
+            className="inline-flex items-center gap-2 text-sm font-medium text-amber-700 hover:text-amber-800 hover:underline"
+          >
+            Review & publish <ExternalLink size={13} aria-hidden />
+          </Link>
+        ) : (v.status === "available" || v.status === "pending") && (
           <Link
             href={`/inventory/${v.slug}`}
             target="_blank"

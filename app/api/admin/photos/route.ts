@@ -35,6 +35,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Max 25MB per photo" }, { status: 413 });
   }
 
+  // Enforce per-vehicle photo cap (mirrors UI's "up to 20")
+  const existing = await db
+    .select({ id: vehiclePhotos.id })
+    .from(vehiclePhotos)
+    .where(eq(vehiclePhotos.vehicleId, vehicleId));
+  if (existing.length >= 20) {
+    return NextResponse.json({ error: "Photo limit reached (20 max)" }, { status: 413 });
+  }
+
   let processed;
   try {
     const buf = Buffer.from(await file.arrayBuffer());
@@ -59,8 +68,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Storage upload failed" }, { status: 502 });
   }
 
-  // Take next position
-  const existing = await db.select({ id: vehiclePhotos.id }).from(vehiclePhotos).where(eq(vehiclePhotos.vehicleId, vehicleId));
+  // Take next position (existing already counted above)
   const position = existing.length;
 
   const [row] = await db

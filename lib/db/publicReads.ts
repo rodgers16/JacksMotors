@@ -42,6 +42,14 @@ export type PublicVehicle = {
   /** First photo URL */
   image: string;
   blur?: string | null;
+  /** Dealer-written walkaround / notes */
+  description?: string | null;
+  exteriorColor?: string | null;
+  interiorColor?: string | null;
+  vin?: string | null;
+  carfaxUrl?: string | null;
+  /** All photos (sorted by position), so the public page can show a gallery, not just the cover */
+  photos?: { id: string; url: string; blur?: string | null; width: number; height: number }[];
 };
 
 const dbConfigured = () => Boolean(process.env.DATABASE_URL);
@@ -65,6 +73,12 @@ function fromDb(v: VehicleWithPhotos): PublicVehicle {
     badges: v.badges ?? [],
     image: photo?.url ?? "",
     blur: photo?.blur ?? null,
+    description: v.description,
+    exteriorColor: v.exteriorColor,
+    interiorColor: v.interiorColor,
+    vin: v.vin,
+    carfaxUrl: v.carfaxUrl,
+    photos: v.photos.map((p) => ({ id: p.id, url: p.url, blur: p.blur, width: p.width, height: p.height })),
   };
 }
 
