@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Sparkles, Loader2, Check, Camera, ArrowLeft, AlertCircle, Search, X, ShieldAlert, Gauge } from "lucide-react";
+import { Sparkles, Loader2, Check, Camera, ArrowLeft, AlertCircle, Search, X, ShieldAlert, Gauge, Trash2 } from "lucide-react";
 import {
   vehicleSchema,
   type VehicleInput,
@@ -20,6 +20,7 @@ import { BADGE_PRESETS } from "@/lib/presets/badges";
 import { isValidVin, normalizeVin } from "@/lib/vin/validate";
 import type { DecodeResult } from "@/lib/vin/decode";
 import { PhotoUploader, type Photo } from "./PhotoUploader";
+import { StagedPhotoPicker, type StagedPhoto } from "./StagedPhotoPicker";
 import { VinScanner } from "./VinScanner";
 import {
   AdminButton,
@@ -52,6 +53,11 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
   const router = useRouter();
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = React.useState<string | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [stagedPhotos, setStagedPhotos] = React.useState<StagedPhoto[]>([]);
+  const [photoProgress, setPhotoProgress] = React.useState<{ done: number; total: number } | null>(null);
   const [decoding, setDecoding] = React.useState(false);
   const [decodeMsg, setDecodeMsg] = React.useState<{ tone: "info" | "success" | "warn"; text: string } | null>(null);
   const [scannerOpen, setScannerOpen] = React.useState(false);
@@ -260,6 +266,7 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitting(true);
     setSubmitError(null);
+    setSubmitSuccess(null);
     try {
       const url = mode === "new" ? "/api/admin/vehicles" : `/api/admin/vehicles/${vehicleId}`;
       const method = mode === "new" ? "POST" : "PATCH";
@@ -273,10 +280,52 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
         throw new Error(data?.error ?? `Save failed (${res.status})`);
       }
       const { vehicle } = await res.json();
-      if (mode === "new") {
-        router.push(`/admin/inventory/${vehicle.id}/edit?created=1`);
+
+      // On create, upload any staged photos sequentially before redirect
+      if (mode === "new" && stagedPhotos.length > 0) {
+        const { default: imageCompression } = await import("browser-image-compression");
+        setPhotoProgress({ done: 0, total: stagedPhotos.length });
+        const failures: string[] = [];
+        for (let i = 0; i < stagedPhotos.length; i++) {
+          const sp = stagedPhotos[i];
+          try {
+            const compressed = await imageCompression(sp.file, {
+              maxSizeMB: 1.5,
+              maxWidthOrHeight: 2400,
+              useWebWorker: true,
+              initialQuality: 0.85,
+            });
+            const fd = new FormData();
+            fd.append("vehicleId", vehicle.id);
+            fd.append("file", compressed, sp.file.name);
+            const upRes = await fetch("/api/admin/photos", { method: "POST", body: fd });
+            if (!upRes.ok) throw new Error(`Upload failed (${upRes.status})`);
+          } catch (err) {
+            failures.push(sp.file.name);
+            console.error("[staged-photo] upload failed", err);
+          }
+          setPhotoProgress({ done: i + 1, total: stagedPhotos.length });
+        }
+        setPhotoProgress(null);
+        if (failures.length > 0) {
+          setSubmitError(`Vehicle created, but ${failures.length} photo(s) failed to upload. Add them on the edit page.`);
+        }
+      }
+
+      // After save:
+      //  - new mode → review page (always — new listings save as drafts)
+      //  - editing a draft → back to the review page so dealer can publish
+      //  - editing a published listing → show success banner, then send to public page
+      const savedStatus = vehicle?.status ?? values.status;
+      if (mode === "new" || savedStatus === "draft") {
+        router.push(`/admin/inventory/${vehicle.id}/review`);
       } else {
+        setSubmitSuccess("Listing updated. Opening live page…");
         router.refresh();
+        const slug = vehicle?.slug;
+        setTimeout(() => {
+          if (slug) router.push(`/inventory/${slug}`);
+        }, 900);
       }
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Save failed");
@@ -285,14 +334,31 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
     }
   });
 
+  const onDelete = async () => {
+    if (!vehicleId || deleting) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/vehicles/${vehicleId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? `Delete failed (${res.status})`);
+      }
+      router.push("/admin/inventory");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Delete failed");
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
+
   // Renders a locked, green "VIN-filled" pill in place of an input. Clicking
   // Change unlocks the field, returning to the normal input/select.
   const renderVinLocked = (key: keyof VehicleInput, value: React.ReactNode) => (
-    <div className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 h-12">
-      <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-        <Check size={13} strokeWidth={3} aria-hidden />
+    <div className="flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 pl-2 pr-2 sm:pl-3 sm:pr-3 h-12">
+      <span className="inline-flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+        <Check size={11} strokeWidth={3} aria-hidden />
       </span>
-      <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-emerald-950">
+      <span className="min-w-0 flex-1 truncate text-sm sm:text-[15px] font-semibold text-emerald-950">
         {value || <span className="text-emerald-700/60 italic">—</span>}
       </span>
       <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700/70">
@@ -301,7 +367,7 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
       <button
         type="button"
         onClick={() => unlockVinField(key)}
-        className="text-xs font-medium text-emerald-800 hover:text-emerald-900 underline underline-offset-4 decoration-emerald-400 hover:decoration-emerald-700"
+        className="shrink-0 text-xs font-medium text-emerald-800 hover:text-emerald-900 underline underline-offset-4 decoration-emerald-400 hover:decoration-emerald-700"
       >
         Change
       </button>
@@ -629,7 +695,7 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
       {/* Vehicle details */}
       <AdminCard title="Vehicle details" description="The basics — fill in or confirm what the VIN decoded.">
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AdminField label="Year" required error={form.formState.errors.year?.message}>
               {vinFilled.has("year") ? (
                 renderVinLocked("year", yearValue)
@@ -668,7 +734,7 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
 
       {/* Specs */}
       <AdminCard title="Specs">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <AdminField label="Body type" required>
             {vinFilled.has("body") ? (
               renderVinLocked("body", bodyValue)
@@ -725,7 +791,7 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
                 inputMode="numeric"
                 min={1}
                 max={1_000_000}
-                step={100}
+                step={1}
                 placeholder="68500"
                 className="pl-8"
               />
@@ -744,7 +810,7 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
                 inputMode="numeric"
                 min={0}
                 max={999_999}
-                step={100}
+                step={1}
                 placeholder="18420"
                 className="pr-12"
               />
@@ -758,7 +824,7 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
 
       {/* Color */}
       <AdminCard title="Color">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <AdminField label="Exterior" hint="optional">
             <AdminSelect {...form.register("exteriorColor")}>
               <option value="">— select —</option>
@@ -811,15 +877,13 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
         description={
           mode === "edit"
             ? "Drag to reorder. The first photo is the cover image."
-            : "Save the vehicle once, then come back to upload photos."
+            : "Add photos now — they'll upload right after the listing is created."
         }
       >
         {mode === "edit" && vehicleId ? (
           <PhotoUploader vehicleId={vehicleId} initialPhotos={initialPhotos} />
         ) : (
-          <div className="rounded-lg border border-dashed border-[hsl(var(--border))] p-6 text-center">
-            <p className="text-sm text-muted-foreground">Save first, then photos.</p>
-          </div>
+          <StagedPhotoPicker photos={stagedPhotos} onChange={setStagedPhotos} />
         )}
       </AdminCard>
 
@@ -836,27 +900,88 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
       </AdminCard>
 
       {/* Status */}
-      <AdminCard title="Visibility" description="When this car shows on the public site.">
-        <AdminField label="Status">
-          <AdminSelect {...form.register("status")}>
-            <option value="available">Available — show on site</option>
-            <option value="pending">Pending — show with sale-pending badge</option>
-            <option value="sold">Sold — hide from site</option>
-            <option value="hidden">Hidden — admin-only</option>
-            <option value="draft">Draft — admin-only, not yet ready</option>
-          </AdminSelect>
-        </AdminField>
-        {(status === "available" || status === "pending") && (
-          <p className="mt-3 text-sm text-emerald-700 inline-flex items-center gap-1.5">
-            <Check size={14} aria-hidden /> This vehicle will be visible to visitors.
+      {mode === "edit" ? (
+        <AdminCard title="Visibility" description="When this car shows on the public site.">
+          <AdminField label="Status">
+            <AdminSelect {...form.register("status")}>
+              <option value="available">Available — show on site</option>
+              <option value="pending">Pending — show with sale-pending badge</option>
+              <option value="sold">Sold — hide from site</option>
+              <option value="hidden">Hidden — admin-only</option>
+              <option value="draft">Draft — admin-only, not yet ready</option>
+            </AdminSelect>
+          </AdminField>
+          {(status === "available" || status === "pending") && (
+            <p className="mt-3 text-sm text-emerald-700 inline-flex items-center gap-1.5">
+              <Check size={14} aria-hidden /> This vehicle will be visible to visitors.
+            </p>
+          )}
+        </AdminCard>
+      ) : (
+        <AdminCard title="Visibility" description="New listings save as a draft. You'll review and publish on the next step.">
+          <p className="text-sm text-muted-foreground">
+            After you click <span className="font-medium text-foreground">Create vehicle</span>, you'll land on a preview page to confirm everything looks right — then publish in one tap.
           </p>
-        )}
-      </AdminCard>
+        </AdminCard>
+      )}
+
+      {/* Danger zone — only on edit */}
+      {mode === "edit" && (
+        <section className="rounded-2xl border border-red-200 bg-red-50/50 p-5 sm:p-6">
+          <header className="mb-3">
+            <h2 className="text-lg font-semibold text-red-900 sm:text-xl">Danger zone</h2>
+            <p className="mt-1 text-sm text-red-800/80">
+              Permanently delete this listing and all of its photos. This cannot be undone.
+            </p>
+          </header>
+          {!confirmDelete ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors"
+            >
+              <Trash2 size={15} aria-hidden /> Delete this listing
+            </button>
+          ) : (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <p className="text-sm font-medium text-red-900">
+                Permanently delete this car and all its photos?
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {deleting ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Trash2 size={15} aria-hidden />}
+                  {deleting ? "Deleting listing…" : "Yes, delete forever"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="px-3 py-2.5 text-sm text-red-900 hover:underline"
+                >
+                  Keep listing
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {submitError && (
         <AdminBanner tone="danger">
           <AlertCircle size={16} className="inline mr-1.5 -mt-0.5" />
           {submitError}
+        </AdminBanner>
+      )}
+
+      {submitSuccess && (
+        <AdminBanner tone="success">
+          <Check size={16} className="inline mr-1.5 -mt-0.5" />
+          {submitSuccess}
         </AdminBanner>
       )}
 
@@ -870,9 +995,21 @@ export function VehicleForm({ mode, vehicleId, initial, initialPhotos = [] }: Pr
           >
             Cancel
           </button>
-          <AdminButton type="submit" disabled={submitting} size="lg" className="min-w-[160px]">
+          <AdminButton type="submit" disabled={submitting} size="lg" className="min-w-[200px]">
             {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-            {submitting ? "Saving…" : mode === "new" ? "Create vehicle" : "Save changes"}
+            {photoProgress
+              ? `Uploading photo ${photoProgress.done} of ${photoProgress.total}…`
+              : submitting
+                ? mode === "new"
+                  ? "Saving draft…"
+                  : status === "draft"
+                    ? "Saving draft…"
+                    : "Saving changes…"
+                : mode === "new"
+                  ? "Save draft & preview"
+                  : status === "draft"
+                    ? "Save draft & preview"
+                    : "Save changes"}
           </AdminButton>
         </div>
       </div>
